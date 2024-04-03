@@ -111,6 +111,43 @@ pub unsafe extern "C" fn wasi_config_preopen_dir(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn wasi_config_preopen_dir_extra(
+    config: &mut wasi_config_t,
+    dir: *const c_char,
+    alias: *const c_char,
+    read_prop: bool,
+    write_prop: bool,
+    create_prop: bool,
+) -> bool {
+    let dir_cstr = CStr::from_ptr(dir);
+    let dir_bytes = dir_cstr.to_bytes();
+    let dir_str = match std::str::from_utf8(dir_bytes) {
+        Ok(dir_str) => dir_str,
+        Err(e) => {
+            update_last_error(e);
+            return false;
+        }
+    };
+
+    let alias_cstr = CStr::from_ptr(alias);
+    let alias_bytes = alias_cstr.to_bytes();
+    let alias_str = match std::str::from_utf8(alias_bytes) {
+        Ok(alias_str) => alias_str,
+        Err(e) => {
+            update_last_error(e);
+            return false;
+        }
+    };
+
+    if let Err(e) = config.builder.add_preopen_build(|p| p.directory(dir_str).alias(alias_str).read(read_prop).write(write_prop).create(create_prop)) {
+        update_last_error(e);
+        return false;
+    }
+
+    true
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn wasi_config_mapdir(
     config: &mut wasi_config_t,
     alias: *const c_char,
